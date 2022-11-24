@@ -21,46 +21,48 @@ const themeColors = [
   "text",
 ] as const;
 
-const configSchema = z.object({
-  // Overall theme of the overlay
-  theme: z.enum(["latte", "frappe", "macchiato", "mocha"]),
+const configSchema = z
+  .object({
+    // Overall theme of the overlay
+    theme: z.enum(["latte", "frappe", "macchiato", "mocha"]),
 
-  // Either blurred background or solid color
-  backgroundStyle: z.enum(["blur", "solid"]),
+    // Either blurred background or solid color
+    backgroundStyle: z.enum(["blur", "solid"]),
 
-  // Color of the artist text
-  artistColor: z.enum(themeColors),
+    // Color of the artist text
+    artistColor: z.enum(themeColors),
 
-  // Color of the song text
-  songColor: z.enum(themeColors),
+    // Color of the song text
+    songColor: z.enum(themeColors),
 
-  // Color to accent the background with
-  accentColor: z.enum(themeColors),
+    // Color to accent the background with
+    accentColor: z.enum(themeColors),
 
-  // Color of the ring around the album art
-  albumColor: z.enum(themeColors),
+    // Color of the ring around the album art
+    albumColor: z.enum(themeColors),
 
-  // How long it takes for the overlay to slide in
-  transitionTime: z.number().positive(),
+    // How long it takes for the overlay to slide in
+    transitionTime: z.number().positive(),
 
-  // Animate from the top or bottom of the screen
-  animateFrom: z.enum(["top", "bottom"]),
+    // Animate from the top or bottom of the screen
+    animateFrom: z.enum(["top", "bottom"]),
 
-  // How long the overlay stays on screen after transitioning in
-  displayTime: z.number().positive(),
+    // How long the overlay stays on screen after transitioning in
+    displayTime: z.number().positive(),
 
-  // Disable animations and always show the overlay
-  alwaysShow: z.boolean(),
+    // Disable animations and always show the overlay
+    alwaysShow: z.boolean(),
 
-  // How often to check for new song data
-  refreshInterval: z.number().positive(),
+    // How often to check for new song data
+    refreshInterval: z.number().positive(),
 
-  // Change your tuna host
-  host: z.string().url(),
+    // Change your tuna host
+    host: z.string().url(),
 
-  // Change your tuna port
-  port: z.number().positive(),
-});
+    // Change your tuna port
+    port: z.number().positive(),
+  })
+  .strict();
 
 // Song Info Components
 const SongInfo: FunctionComponent<{
@@ -144,7 +146,7 @@ export function App() {
     port = "1608",
   } = Object.fromEntries(new URLSearchParams(window.location.search));
 
-  const config = configSchema.parse({
+  const config = configSchema.safeParse({
     theme,
     artistColor,
     songColor,
@@ -160,9 +162,37 @@ export function App() {
     accentColor,
   });
 
-  const height = config.alwaysShow
+  if (!config.success) {
+    return (
+      <div className="mocha flex h-screen flex-col items-center justify-center">
+        <div className="rounded-md bg-crust p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-mauve">
+                There are {config.error.issues.length} error(s) with your
+                configuration
+              </h3>
+              <div className="mt-2 text-sm text-text">
+                <ul role="list" className="list-disc pl-5">
+                  {config.error.issues.map((error) => (
+                    <li>
+                      <p className={"font-bold"}>{error.path}</p>
+                      <p>{error.message}</p>
+                      <br />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const height = config.data.alwaysShow
     ? 0
-    : config.animateFrom === "top"
+    : config.data.animateFrom === "top"
     ? 192
     : -192; // Card Height: 160px + 32px Padding
   const [containerY, setContainerY] = useState(-height);
@@ -172,48 +202,49 @@ export function App() {
     if (isShowing) return;
 
     // Use Fetch to grab song info from Tuna
-    const { title, artists, cover_path } = await (
-      await fetch(`${config.host}:${config.port}`)
+    const { title, artists, cover_url } = await (
+      await fetch(`${config.data.host}:${config.data.port}`)
     ).json();
 
     // Update the state with the new song info
     if (title !== songTitle) {
       setSongTitle(title);
       setSongArtists(artists);
-      setCoverUrl(cover_path);
+      // Append current date to bust local image cache
+      setCoverUrl(`${cover_url}?${Date.now()}`);
       popoutSong();
     }
   };
 
   const popoutSong = () => {
-    if (!config.alwaysShow) {
+    if (!config.data.alwaysShow) {
       setContainerY(0);
       setIsShowing(true);
 
       setTimeout(() => {
         setTimeout(() => {
           hideSong();
-        }, config.displayTime * 1000);
-      }, config.transitionTime * 1000);
+        }, config.data.displayTime * 1000);
+      }, config.data.transitionTime * 1000);
     }
   };
 
   const hideSong = () => {
-    if (!config.alwaysShow) {
+    if (!config.data.alwaysShow) {
       setContainerY(-height);
       setTimeout(() => {
         setIsShowing(false);
-      }, config.transitionTime * 1000);
+      }, config.data.transitionTime * 1000);
     }
   };
 
   useInterval(() => {
     fetchSongData();
-  }, config.refreshInterval);
+  }, config.data.refreshInterval);
 
   const background =
-    config.backgroundStyle === "blur" ? (
-      <BlurredBackground src={coverUrl} accentColor={config.accentColor} />
+    config.data.backgroundStyle === "blur" ? (
+      <BlurredBackground src={coverUrl} accentColor={config.data.accentColor} />
     ) : (
       <SolidBackground />
     );
@@ -221,11 +252,11 @@ export function App() {
   const albumArt = coverUrl ? (
     <img
       src={coverUrl}
-      className={`h-32 w-32 rounded-xl object-cover ring-2 ring-${config.albumColor} z-30`}
+      className={`h-32 w-32 rounded-xl object-cover ring-2 ring-${config.data.albumColor} z-30`}
     />
   ) : (
     <div
-      className={`h-32 w-32 animate-pulse rounded-xl bg-crust object-cover ring-2 ring-${config.albumColor} z-30`}
+      className={`h-32 w-32 animate-pulse rounded-xl bg-crust object-cover ring-2 ring-${config.data.albumColor} z-30`}
     />
   );
 
@@ -233,34 +264,36 @@ export function App() {
     <SongInfo
       artist={songArtists}
       song={songTitle}
-      artistColor={config.artistColor}
-      songColor={config.songColor}
+      artistColor={config.data.artistColor}
+      songColor={config.data.songColor}
     />
   ) : (
     <SongInfoLoader />
   );
 
   return (
-    <div
-      className={`${config.theme} grid h-screen w-screen ${
-        config.animateFrom === "bottom" && "content-end"
-      } justify-center overflow-hidden`}
-    >
+    <>
       <div
-        className={`m-4 h-[160px] overflow-hidden rounded-xl bg-cover bg-center shadow-md shadow-black`}
-        style={{
-          transform: `translateY(${containerY}px)`,
-          transition: `transform ${config.transitionTime}s cubic-bezier(0.77,0,0.18,1)`,
-        }}
+        className={`${config.data.theme} grid h-screen w-screen ${
+          config.data.animateFrom === "bottom" && "content-end"
+        } justify-center overflow-hidden`}
       >
-        {background}
-        <div className="flex p-4">
-          {albumArt}
-          <div className="z-30 ml-4 flex h-32 flex-col justify-center align-middle">
-            {songInfo}
+        <div
+          className={`m-4 h-[160px] overflow-hidden rounded-xl bg-cover bg-center shadow-md shadow-black`}
+          style={{
+            transform: `translateY(${containerY}px)`,
+            transition: `transform ${config.data.transitionTime}s cubic-bezier(0.77,0,0.18,1)`,
+          }}
+        >
+          {background}
+          <div className="flex p-4">
+            {albumArt}
+            <div className="z-30 ml-4 flex h-32 flex-col justify-center align-middle">
+              {songInfo}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
