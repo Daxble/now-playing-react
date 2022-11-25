@@ -61,6 +61,10 @@ const configSchema = z
 
     // Change your tuna port
     port: z.number().positive(),
+
+    // Try to use the local image Tuna provides
+    // Has some issues with https, but useful if running locally
+    useLocalFile: z.boolean(),
   })
   .strict();
 
@@ -144,6 +148,7 @@ export function App() {
     refreshInterval = "1000",
     host = "http://localhost",
     port = "1608",
+    useLocalFile = "false",
   } = Object.fromEntries(new URLSearchParams(window.location.search));
 
   const config = configSchema.safeParse({
@@ -160,6 +165,7 @@ export function App() {
     alwaysShow: alwaysShow === "true",
     animateFrom,
     accentColor,
+    useLocalFile: useLocalFile === "true",
   });
 
   if (!config.success) {
@@ -202,7 +208,7 @@ export function App() {
     if (isShowing) return;
 
     // Use Fetch to grab song info from Tuna
-    const { title, artists, cover_url } = await (
+    const { title, artists, cover_url, cover_path } = await (
       await fetch(`${config.data.host}:${config.data.port}`)
     ).json();
 
@@ -211,7 +217,11 @@ export function App() {
       setSongTitle(title);
       setSongArtists(artists);
       // Append current date to bust local image cache
-      setCoverUrl(`${cover_url}?${Date.now()}`);
+      if (config.data.useLocalFile) {
+        setCoverUrl(`${cover_url}?${Date.now()}`);
+      } else {
+        setCoverUrl(cover_path);
+      }
       popoutSong();
     }
   };
