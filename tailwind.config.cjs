@@ -34,8 +34,5 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    require("@tailwindcss/line-clamp"),
-    require("@catppuccin/tailwindcss"),
-  ],
+  plugins: [require("@catppuccin/tailwindcss")],
 };

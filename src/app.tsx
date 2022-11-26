@@ -1,7 +1,17 @@
-import type { FunctionComponent } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { useInterval } from "usehooks-ts";
 import { z } from "zod";
+
+import { AlbumArt } from "./components/album-art/album-art";
+import { AlbumArtLoader } from "./components/album-art/album-art-loader";
+
+import { BlurredBackground } from "./components/backgrounds/blurred";
+import { SolidBackground } from "./components/backgrounds/solid";
+import { ConfigErrors } from "./components/configErrors";
+
+import { SongInfo } from "./components/song-info/song-info";
+import { SongInfoLoader } from "./components/song-info/song-info-loader";
+import { measureText, truncateText } from "./utils/measure";
 
 const themeColors = [
   "rosewater",
@@ -41,11 +51,18 @@ const configSchema = z
     // Color of the ring around the album art
     albumColor: z.enum(themeColors),
 
-    // How long it takes for the overlay to slide in
+    // alwaysShow: false, How long the overlay takes to slide in
+    // alwaysShow: true, How long the overlay takes to change size
     transitionTime: z.number().positive(),
+
+    // How long text takes to fade out
+    textFadeTime: z.number().positive(),
 
     // Animate from the top or bottom of the screen
     animateFrom: z.enum(["top", "bottom"]),
+
+    // Where to place the overlay horizontally
+    justify: z.enum(["left", "center", "right"]),
 
     // How long the overlay stays on screen after transitioning in
     displayTime: z.number().positive(),
@@ -68,72 +85,7 @@ const configSchema = z
   })
   .strict();
 
-// Song Info Components
-const SongInfo: FunctionComponent<{
-  artist: string[];
-  song: string;
-  artistColor: string;
-  songColor: string;
-}> = ({ artist, song, artistColor, songColor }) => {
-  return (
-    <>
-      <h1
-        className={`text-${artistColor} font-inter text-4xl font-bold line-clamp-1`}
-      >
-        {artist.join(", ")}
-      </h1>
-
-      <h2
-        className={`text-${songColor} overflow-auto pb-[1px] font-inter text-4xl font-semibold line-clamp-1`}
-      >
-        {song}
-      </h2>
-    </>
-  );
-};
-
-const SongInfoLoader = () => {
-  return (
-    <>
-      <div className="mb-2 h-10 w-48 animate-pulse rounded-lg bg-crust" />
-      <div className="h-10 w-64 animate-pulse rounded-lg bg-crust" />
-    </>
-  );
-};
-
-// Background Components
-const BlurredBackground: FunctionComponent<{
-  src: string;
-  accentColor: string;
-}> = ({ src, accentColor }) => {
-  return (
-    <>
-      <div className={`absolute h-full w-full rounded-xl blur-md`}>
-        <img
-          src={src}
-          className={`absolute top-[-16px] left-[-16px] h-[calc(100%+32px)] w-[calc(100%+32px)] max-w-[calc(100%+32px)] object-cover`}
-        />
-        <div
-          className={`absolute top-[-16px] left-[-16px] z-20 h-[calc(100%+32px)] w-[calc(100%+32px)] max-w-[calc(100%+32px)] bg-base opacity-70`}
-        />
-        <div
-          className={`absolute z-30 h-full w-full ring-8 ring-inset ring-${accentColor} blur-lg`}
-        ></div>
-      </div>
-    </>
-  );
-};
-
-const SolidBackground = () => {
-  return <div className={`absolute z-20 h-full w-full rounded-xl bg-base`} />;
-};
-
 export function App() {
-  const [songTitle, setSongTitle] = useState("");
-  const [songArtists, setSongArtists] = useState<string[]>([]);
-  const [coverUrl, setCoverUrl] = useState("");
-  const [isShowing, setIsShowing] = useState(false);
-
   const {
     theme = "mocha",
     backgroundStyle = "blur",
@@ -141,90 +93,137 @@ export function App() {
     songColor = "text",
     accentColor = "mauve",
     albumColor = "mauve",
-    transitionTime = "1",
+    transitionTime = "500",
     animateFrom = "top",
-    displayTime = "5",
+    displayTime = "5000",
     alwaysShow = "false",
     refreshInterval = "1000",
     host = "http://localhost",
     port = "1608",
     useLocalFile = "false",
+    justify = "center",
+    textFadeTime = "200",
   } = Object.fromEntries(new URLSearchParams(window.location.search));
+
+  const justifyMappings = {
+    left: "justify-start",
+    center: "justify-center",
+    right: "justify-end",
+  };
 
   const config = configSchema.safeParse({
     theme,
     artistColor,
     songColor,
     albumColor,
+    animateFrom,
+    accentColor,
+    backgroundStyle,
+    alwaysShow: alwaysShow === "true",
+    textFadeTime: parseInt(textFadeTime),
+    justify,
     host,
     port: parseInt(port),
     refreshInterval: parseInt(refreshInterval),
     transitionTime: parseInt(transitionTime),
     displayTime: parseInt(displayTime),
-    backgroundStyle,
-    alwaysShow: alwaysShow === "true",
-    animateFrom,
-    accentColor,
     useLocalFile: useLocalFile === "true",
   });
 
   if (!config.success) {
-    return (
-      <div className="mocha flex h-screen flex-col items-center justify-center">
-        <div className="rounded-md bg-crust p-4">
-          <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-mauve">
-                There are {config.error.issues.length} error(s) with your
-                configuration
-              </h3>
-              <div className="mt-2 text-sm text-text">
-                <ul role="list" className="list-disc pl-5">
-                  {config.error.issues.map((error) => (
-                    <li>
-                      <p className={"font-bold"}>{error.path}</p>
-                      <p>{error.message}</p>
-                      <br />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ConfigErrors issues={config.error.issues} />;
   }
 
-  const height = config.data.alwaysShow
-    ? 0
-    : config.data.animateFrom === "top"
-    ? 192
-    : -192; // Card Height: 160px + 32px Padding
-  const [containerY, setContainerY] = useState(-height);
+  const designValues = {
+    baseWidth: 128 + 24 + 32,
+    initialWidth: 445,
+    maxWidth: window.innerWidth - 32,
+    containerHeight: 160,
+    maxTextWidth: function () {
+      return window.innerWidth - this.baseWidth - 32;
+    },
+    transitionTo: config.data.alwaysShow
+      ? 0
+      : config.data.animateFrom === "top"
+      ? 192
+      : -192,
+    transitionTime: `${config.data.transitionTime}ms`,
+    displayTime: `${config.data.displayTime}ms`,
+    textFadeTime: `${config.data.textFadeTime}ms`,
+    initalTextOpacity: !config.data.alwaysShow ? 1 : 0,
+    transition: "cubic-bezier(0.77,0,0.18,1)",
+  };
+
+  const [coverUrl, setCoverUrl] = useState("");
+  const [isShowing, setIsShowing] = useState(false);
+
+  const [songTitle, setSongTitle] = useState("");
+  const [songArtists, setSongArtists] = useState<string[]>([]);
+
+  const measurementCanvas = useRef<HTMLCanvasElement>(
+    document.createElement("canvas")
+  );
+
+  const [containerY, setContainerY] = useState(-designValues.transitionTo);
+  const [containerW, setContainerW] = useState(designValues.initialWidth);
+
+  const [textOpacity, setTextOpacity] = useState(
+    designValues.initalTextOpacity
+  );
 
   const fetchSongData = async () => {
-    // Don't fetch while the card is showing
     if (isShowing) return;
 
-    // Use Fetch to grab song info from Tuna
     const { title, artists, cover_url, cover_path } = await (
       await fetch(`${config.data.host}:${config.data.port}`)
     ).json();
 
-    // Update the state with the new song info
     if (title !== songTitle) {
-      setSongTitle(title);
-      setSongArtists(artists);
-      // Append current date to bust local image cache
-      if (config.data.useLocalFile) {
-        setCoverUrl(`${cover_url}?${Date.now()}`);
-      } else {
-        setCoverUrl(cover_path);
+      if (config.data.alwaysShow) {
+        setTextOpacity(0);
       }
-      popoutSong();
+      setTimeout(() => {
+        setSongTitle(title);
+        setSongArtists(artists);
+        if (config.data.useLocalFile) {
+          setCoverUrl(`${cover_url}?${Date.now()}`);
+        } else {
+          setCoverUrl(cover_path);
+        }
+        popoutSong();
+      }, config.data.textFadeTime);
     }
   };
+
+  const updateContainerWidth = () => {
+    if (songTitle && songArtists) {
+      const titleWidth = measureText(
+        songTitle,
+        "2.25rem Inter",
+        measurementCanvas.current
+      ).width;
+      const artistsWidth = measureText(
+        songArtists.join(", "),
+        "2.25rem Inter",
+        measurementCanvas.current
+      ).width;
+
+      const width = Math.max(titleWidth, artistsWidth) + designValues.baseWidth;
+      const containerWidth = Math.min(width, designValues.maxWidth);
+
+      setContainerW(containerWidth);
+
+      if (config.data.alwaysShow) {
+        setTimeout(() => {
+          setTextOpacity(1);
+        }, config.data.transitionTime);
+      }
+    }
+  };
+
+  useEffect(() => {
+    updateContainerWidth();
+  }, [songTitle, songArtists]);
 
   const popoutSong = () => {
     if (!config.data.alwaysShow) {
@@ -234,17 +233,17 @@ export function App() {
       setTimeout(() => {
         setTimeout(() => {
           hideSong();
-        }, config.data.displayTime * 1000);
-      }, config.data.transitionTime * 1000);
+        }, config.data.displayTime);
+      }, config.data.transitionTime);
     }
   };
 
   const hideSong = () => {
     if (!config.data.alwaysShow) {
-      setContainerY(-height);
+      setContainerY(-designValues.transitionTo);
       setTimeout(() => {
         setIsShowing(false);
-      }, config.data.transitionTime * 1000);
+      }, config.data.transitionTime);
     }
   };
 
@@ -260,22 +259,29 @@ export function App() {
     );
 
   const albumArt = coverUrl ? (
-    <img
-      src={coverUrl}
-      className={`h-32 w-32 rounded-xl object-cover ring-2 ring-${config.data.albumColor} z-30`}
-    />
+    <AlbumArt src={coverUrl} accentColor={config.data.albumColor} />
   ) : (
-    <div
-      className={`h-32 w-32 animate-pulse rounded-xl bg-crust object-cover ring-2 ring-${config.data.albumColor} z-30`}
-    />
+    <AlbumArtLoader accentColor={config.data.albumColor} />
   );
 
   const songInfo = songTitle ? (
     <SongInfo
-      artist={songArtists}
-      song={songTitle}
+      artists={truncateText(
+        songArtists.join(", "),
+        "2.25rem Inter",
+        designValues.maxTextWidth(),
+        measurementCanvas.current
+      )}
+      song={truncateText(
+        songTitle,
+        "2.25rem Inter",
+        designValues.maxTextWidth(),
+        measurementCanvas.current
+      )}
       artistColor={config.data.artistColor}
       songColor={config.data.songColor}
+      opacity={textOpacity}
+      transitionTime={config.data.textFadeTime}
     />
   ) : (
     <SongInfoLoader />
@@ -284,21 +290,31 @@ export function App() {
   return (
     <>
       <div
-        className={`${config.data.theme} grid h-screen w-screen ${
-          config.data.animateFrom === "bottom" && "content-end"
-        } justify-center overflow-hidden`}
+        className={`${
+          config.data.theme
+        } grid h-screen w-screen overflow-hidden ${
+          justifyMappings[config.data.justify]
+        } ${config.data.animateFrom === "bottom" && "content-end"}`}
       >
         <div
-          className={`m-4 h-[160px] overflow-hidden rounded-xl bg-cover bg-center shadow-md shadow-black`}
+          className={`m-4 origin-center overflow-hidden rounded-xl bg-cover bg-center shadow-md shadow-black`}
           style={{
+            transition: `transform ${config.data.transitionTime}ms ${
+              designValues.transition
+            }${
+              config.data.alwaysShow
+                ? `, width ${config.data.transitionTime}ms ${designValues.transition}`
+                : ""
+            }`,
             transform: `translateY(${containerY}px)`,
-            transition: `transform ${config.data.transitionTime}s cubic-bezier(0.77,0,0.18,1)`,
+            width: `${containerW}px`,
+            height: `${designValues.containerHeight}px`,
           }}
         >
           {background}
-          <div className="flex p-4">
+          <div className="flex py-4 pl-4">
             {albumArt}
-            <div className="z-30 ml-4 flex h-32 flex-col justify-center align-middle">
+            <div className="z-20 ml-4 flex h-32 flex-col justify-center align-middle">
               {songInfo}
             </div>
           </div>
