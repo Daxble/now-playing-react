@@ -25,7 +25,7 @@ export const SongInfo: FunctionComponent<{
   return (
     <>
       <h1
-        className={`text-${artistColor} whitespace-nowrap break-keep text-4xl font-bold`}
+        className={`text-${artistColor} font-artist whitespace-nowrap break-keep text-4xl font-bold`}
         style={{
           opacity,
           transition: `opacity ${transitionTime}ms ${transition}`,
@@ -36,7 +36,7 @@ export const SongInfo: FunctionComponent<{
       </h1>
 
       <h2
-        className={`text-${songColor} whitespace-nowrap break-keep text-4xl font-semibold`}
+        className={`text-${songColor} font-song whitespace-nowrap break-keep text-4xl font-semibold`}
         style={{
           opacity,
           transition: `opacity ${transitionTime}ms ${transition}`,

@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.font-song {
+  @apply font-sans;
+}
+
+.font-artist {
+  @apply font-sans;
+}
