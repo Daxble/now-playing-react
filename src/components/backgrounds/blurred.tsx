@@ -12,7 +12,7 @@ export const BlurredBackground: FunctionComponent<{
           className={`absolute -top-4 -left-4 h-[calc(100%+32px)] w-[calc(100%+32px)] max-w-[calc(100%+32px)] object-cover`}
         />
         <div
-          className={`absolute -top-4 -left-4 h-[calc(100%+32px)] w-[calc(100%+32px)] max-w-[calc(100%+32px)] bg-base opacity-60`}
+          className={`absolute -top-4 -left-4 h-[calc(100%+32px)] w-[calc(100%+32px)] max-w-[calc(100%+32px)] bg-base opacity-75`}
         />
         <div
           className={`absolute h-full w-full ring-8 ring-inset ring-${accentColor} blur-lg`}
