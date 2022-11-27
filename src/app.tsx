@@ -135,7 +135,7 @@ export function App() {
   }
 
   const designValues = {
-    baseWidth: 128 + 24 + 32,
+    baseWidth: 128 + 16 + 32,
     initialWidth: 445,
     maxWidth: window.innerWidth - 32,
     containerHeight: 160,
@@ -227,12 +227,12 @@ export function App() {
     if (songTitle && songArtists) {
       const titleWidth = measureText(
         songTitle,
-        "2.25rem Inter",
+        "600 2.25rem Inter",
         measurementCanvas.current
       ).width;
       const artistsWidth = measureText(
         songArtists.join(", "),
-        "2.25rem Inter",
+        "700 2.25rem Inter",
         measurementCanvas.current
       ).width;
 
@@ -294,15 +294,15 @@ export function App() {
 
   const songInfo = songTitle ? (
     <SongInfo
-      artists={truncateText(
-        songArtists.join(", "),
-        "2.25rem Inter",
+      song={truncateText(
+        songTitle,
+        "600 2.25rem Inter",
         designValues.maxTextWidth(),
         measurementCanvas.current
       )}
-      song={truncateText(
-        songTitle,
-        "2.25rem Inter",
+      artists={truncateText(
+        songArtists.join(", "),
+        "700 2.25rem Inter",
         designValues.maxTextWidth(),
         measurementCanvas.current
       )}
