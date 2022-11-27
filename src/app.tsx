@@ -152,6 +152,34 @@ export function App() {
     textFadeTime: `${config.data.textFadeTime}ms`,
     initalTextOpacity: !config.data.alwaysShow ? 1 : 0,
     transition: "cubic-bezier(0.77,0,0.18,1)",
+    windowStyles: [
+      config.data.theme,
+      justifyMappings[config.data.justify],
+      config.data.animateFrom === "bottom" ? "content-end" : "",
+    ],
+    windowStylesFn: function () {
+      return this.windowStyles.join(" ");
+    },
+    containerStyles: function () {
+      return {
+        transitions: [
+          `transform ${config.data.transitionTime}ms ${designValues.transition}`,
+          config.data.alwaysShow
+            ? `width ${config.data.transitionTime}ms ${designValues.transition}`
+            : "",
+        ],
+      };
+    },
+    containerStylesFn: function () {
+      return {
+        transition: this.containerStyles()
+          .transitions.filter(Boolean)
+          .join(","),
+        transform: `translateY(${containerY}px)`,
+        width: `${containerW}px`,
+        height: `${designValues.containerHeight}px`,
+      };
+    },
   };
 
   const [coverUrl, setCoverUrl] = useState("");
@@ -281,6 +309,7 @@ export function App() {
       artistColor={config.data.artistColor}
       songColor={config.data.songColor}
       opacity={textOpacity}
+      transition={designValues.transition}
       transitionTime={config.data.textFadeTime}
     />
   ) : (
@@ -290,26 +319,11 @@ export function App() {
   return (
     <>
       <div
-        className={`${
-          config.data.theme
-        } grid h-screen w-screen overflow-hidden ${
-          justifyMappings[config.data.justify]
-        } ${config.data.animateFrom === "bottom" && "content-end"}`}
+        className={`grid h-screen w-screen overflow-hidden ${designValues.windowStylesFn()}`}
       >
         <div
           className={`m-4 origin-center overflow-hidden rounded-xl bg-cover bg-center shadow-md shadow-black`}
-          style={{
-            transition: `transform ${config.data.transitionTime}ms ${
-              designValues.transition
-            }${
-              config.data.alwaysShow
-                ? `, width ${config.data.transitionTime}ms ${designValues.transition}`
-                : ""
-            }`,
-            transform: `translateY(${containerY}px)`,
-            width: `${containerW}px`,
-            height: `${designValues.containerHeight}px`,
-          }}
+          style={designValues.containerStylesFn()}
         >
           {background}
           <div className="flex py-4 pl-4">

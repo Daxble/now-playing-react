@@ -7,14 +7,23 @@ export const SongInfo: FunctionComponent<{
   songColor: string;
   opacity: number;
   transitionTime: number;
-}> = ({ artists, song, artistColor, songColor, opacity, transitionTime }) => {
+  transition: string;
+}> = ({
+  artists,
+  song,
+  artistColor,
+  songColor,
+  opacity,
+  transitionTime,
+  transition,
+}) => {
   return (
     <>
       <h1
         className={`text-${artistColor} font-inter text-4xl font-bold`}
         style={{
           opacity,
-          transition: `opacity ${transitionTime}ms cubic-bezier(0.77,0,0.18,1)`,
+          transition: `opacity ${transitionTime}ms ${transition}`,
         }}
       >
         {artists}
@@ -24,7 +33,7 @@ export const SongInfo: FunctionComponent<{
         className={`text-${songColor} whitespace-nowrap break-keep font-inter text-4xl font-semibold`}
         style={{
           opacity,
-          transition: `opacity ${transitionTime}ms cubic-bezier(0.77,0,0.18,1)`,
+          transition: `opacity ${transitionTime}ms ${transition}`,
         }}
       >
         {song}
