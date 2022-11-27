@@ -7,6 +7,7 @@ import { ViteMinifyPlugin } from "vite-plugin-minify";
 export default defineConfig({
   build: {
     minify: "esbuild",
+    sourcemap: "inline",
   },
   plugins: [
     preact(),

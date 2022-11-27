@@ -17,11 +17,21 @@ export const truncateText = (
   maxWidth: number,
   canvas: HTMLCanvasElement
 ) => {
-  let width;
   let len = text.length;
-  while ((width = measureText(text, font, canvas)).width > maxWidth) {
+  while (measureText(text, font, canvas).width > maxWidth) {
     len--;
     text = text.substring(0, len) + "...";
   }
   return text;
+};
+
+export const retrieveFontValues = (element: HTMLDivElement) => {
+  const style = window.getComputedStyle(element);
+  const font = [
+    style.getPropertyValue("font-style"),
+    style.getPropertyValue("font-weight"),
+    style.getPropertyValue("font-size"),
+    style.getPropertyValue("font-family"),
+  ].join(" ");
+  return font;
 };

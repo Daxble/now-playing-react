@@ -11,7 +11,7 @@ import { ConfigErrors } from "./components/configErrors";
 
 import { SongInfo } from "./components/song-info/song-info";
 import { SongInfoLoader } from "./components/song-info/song-info-loader";
-import { measureText, truncateText } from "./utils/measure";
+import { measureText, retrieveFontValues, truncateText } from "./utils/text";
 
 const themeColors = [
   "rosewater",
@@ -105,12 +105,6 @@ export function App() {
     textFadeTime = "200",
   } = Object.fromEntries(new URLSearchParams(window.location.search));
 
-  const justifyMappings = {
-    left: "justify-start",
-    center: "justify-center",
-    right: "justify-end",
-  };
-
   const config = configSchema.safeParse({
     theme,
     artistColor,
@@ -134,19 +128,32 @@ export function App() {
     return <ConfigErrors issues={config.error.issues} />;
   }
 
+  const justifyMappings = {
+    left: "justify-start",
+    center: "justify-center",
+    right: "justify-end",
+  };
+
+  const transitionToMappings = {
+    top: 192,
+    bottom: -192,
+  };
+
   const designValues = {
+    // basewidth: 128px album art, 16px*2 padding, 16px right margin on album art
     baseWidth: 128 + 16 + 32,
-    initialWidth: 445,
+    // initialWidth: 256px skeleton, 128px album art, 16px*2 padding, 16px right margin on album art
+    initialWidth: 256 + 128 + 16 + 32,
+    // maxWidth: window size - 16px*2 padding
     maxWidth: window.innerWidth - 32,
-    containerHeight: 160,
+    // containerHeight: 128px album art, 16px*2 padding
+    containerHeight: 128 + 32,
     maxTextWidth: function () {
-      return window.innerWidth - this.baseWidth - 32;
+      return this.maxWidth - this.baseWidth;
     },
-    transitionTo: config.data.alwaysShow
-      ? 0
-      : config.data.animateFrom === "top"
-      ? 192
-      : -192,
+    transitionTo: !config.data.alwaysShow
+      ? transitionToMappings[config.data.animateFrom]
+      : 0,
     transitionTime: `${config.data.transitionTime}ms`,
     displayTime: `${config.data.displayTime}ms`,
     textFadeTime: `${config.data.textFadeTime}ms`,
@@ -186,11 +193,17 @@ export function App() {
   const [isShowing, setIsShowing] = useState(false);
 
   const [songTitle, setSongTitle] = useState("");
-  const [songArtists, setSongArtists] = useState<string[]>([]);
+  const [songArtists, setSongArtists] = useState("");
+
+  const [truncatedTitle, setTruncatedTitle] = useState("");
+  const [truncatedArtists, setTruncatedArtists] = useState("");
 
   const measurementCanvas = useRef<HTMLCanvasElement>(
     document.createElement("canvas")
   );
+
+  const artistRef = useRef<HTMLDivElement>(null);
+  const songRef = useRef<HTMLDivElement>(null);
 
   const [containerY, setContainerY] = useState(-designValues.transitionTo);
   const [containerW, setContainerW] = useState(designValues.initialWidth);
@@ -212,7 +225,7 @@ export function App() {
       }
       setTimeout(() => {
         setSongTitle(title);
-        setSongArtists(artists);
+        setSongArtists(artists.join(", "));
         if (config.data.useLocalFile) {
           setCoverUrl(`${cover_url}?${Date.now()}`);
         } else {
@@ -224,15 +237,15 @@ export function App() {
   };
 
   const updateContainerWidth = () => {
-    if (songTitle && songArtists) {
+    if (songTitle && songArtists && artistRef.current && songRef.current) {
       const titleWidth = measureText(
         songTitle,
-        "600 2.25rem Inter",
+        retrieveFontValues(songRef.current),
         measurementCanvas.current
       ).width;
       const artistsWidth = measureText(
-        songArtists.join(", "),
-        "700 2.25rem Inter",
+        songArtists,
+        retrieveFontValues(artistRef.current),
         measurementCanvas.current
       ).width;
 
@@ -250,7 +263,26 @@ export function App() {
   };
 
   useEffect(() => {
+    if (!songRef.current || !artistRef.current) return;
+
     updateContainerWidth();
+
+    setTruncatedArtists(
+      truncateText(
+        songArtists,
+        retrieveFontValues(artistRef.current),
+        designValues.maxTextWidth(),
+        measurementCanvas.current
+      )
+    );
+    setTruncatedTitle(
+      truncateText(
+        songTitle,
+        retrieveFontValues(songRef.current),
+        designValues.maxTextWidth(),
+        measurementCanvas.current
+      )
+    );
   }, [songTitle, songArtists]);
 
   const popoutSong = () => {
@@ -294,23 +326,15 @@ export function App() {
 
   const songInfo = songTitle ? (
     <SongInfo
-      song={truncateText(
-        songTitle,
-        "600 2.25rem Inter",
-        designValues.maxTextWidth(),
-        measurementCanvas.current
-      )}
-      artists={truncateText(
-        songArtists.join(", "),
-        "700 2.25rem Inter",
-        designValues.maxTextWidth(),
-        measurementCanvas.current
-      )}
+      song={truncatedTitle}
+      artists={truncatedArtists}
       artistColor={config.data.artistColor}
       songColor={config.data.songColor}
       opacity={textOpacity}
       transition={designValues.transition}
       transitionTime={config.data.textFadeTime}
+      songRef={songRef}
+      artistRef={artistRef}
     />
   ) : (
     <SongInfoLoader />

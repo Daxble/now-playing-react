@@ -1,4 +1,5 @@
-import type { FunctionComponent } from "preact";
+import type { FunctionComponent, Ref, RefObject } from "preact";
+import { retrieveFontValues, truncateText } from "../../utils/text";
 
 export const SongInfo: FunctionComponent<{
   artists: string;
@@ -8,6 +9,8 @@ export const SongInfo: FunctionComponent<{
   opacity: number;
   transitionTime: number;
   transition: string;
+  songRef: RefObject<HTMLDivElement>;
+  artistRef: RefObject<HTMLDivElement>;
 }> = ({
   artists,
   song,
@@ -16,25 +19,29 @@ export const SongInfo: FunctionComponent<{
   opacity,
   transitionTime,
   transition,
+  songRef,
+  artistRef,
 }) => {
   return (
     <>
       <h1
-        className={`text-${artistColor} whitespace-nowrap break-keep font-inter text-4xl font-bold`}
+        className={`text-${artistColor} whitespace-nowrap break-keep text-4xl font-bold`}
         style={{
           opacity,
           transition: `opacity ${transitionTime}ms ${transition}`,
         }}
+        ref={artistRef}
       >
         {artists}
       </h1>
 
       <h2
-        className={`text-${songColor} whitespace-nowrap break-keep font-inter text-4xl font-semibold`}
+        className={`text-${songColor} whitespace-nowrap break-keep text-4xl font-semibold`}
         style={{
           opacity,
           transition: `opacity ${transitionTime}ms ${transition}`,
         }}
+        ref={songRef}
       >
         {song}
       </h2>
