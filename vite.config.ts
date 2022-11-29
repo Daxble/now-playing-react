@@ -16,4 +16,5 @@ export default defineConfig({
     }),
     ViteMinifyPlugin({}),
   ],
+  publicDir: "src/public",
 });

@@ -313,13 +313,21 @@ export function App() {
 
   const background =
     config.data.backgroundStyle === "blur" ? (
-      <BlurredBackground src={coverUrl} accentColor={config.data.accentColor} />
+      <BlurredBackground
+        src={coverUrl}
+        accentColor={config.data.accentColor}
+        transitionDuration={config.data.transitionTime}
+      />
     ) : (
       <SolidBackground />
     );
 
   const albumArt = coverUrl ? (
-    <AlbumArt src={coverUrl} accentColor={config.data.albumColor} />
+    <AlbumArt
+      src={coverUrl}
+      accentColor={config.data.albumColor}
+      transitionDuration={config.data.transitionTime}
+    />
   ) : (
     <AlbumArtLoader accentColor={config.data.albumColor} />
   );
