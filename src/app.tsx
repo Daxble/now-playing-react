@@ -341,23 +341,21 @@ export function App() {
   );
 
   return (
-    <>
+    <div
+      className={`grid h-screen w-screen overflow-hidden ${designValues.windowStylesFn()}`}
+    >
       <div
-        className={`grid h-screen w-screen overflow-hidden ${designValues.windowStylesFn()}`}
+        className={`m-4 origin-center overflow-hidden rounded-xl bg-cover bg-center shadow-md shadow-black`}
+        style={designValues.containerStylesFn()}
       >
-        <div
-          className={`m-4 origin-center overflow-hidden rounded-xl bg-cover bg-center shadow-md shadow-black`}
-          style={designValues.containerStylesFn()}
-        >
-          {background}
-          <div className="flex py-4 pl-4">
-            {albumArt}
-            <div className="z-20 ml-4 flex h-32 flex-col justify-center align-middle">
-              {songInfo}
-            </div>
+        {background}
+        <div className="flex py-4 pl-4">
+          {albumArt}
+          <div className="z-20 ml-4 flex h-32 flex-col justify-center align-middle">
+            {songInfo}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
